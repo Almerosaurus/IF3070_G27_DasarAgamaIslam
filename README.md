@@ -145,19 +145,10 @@ Anda dapat melewati menu interaktif dengan langsung menentukan opsi via CLI:
 python src/main.py --search sa --seed 42 --runs 3
 ```
 
-## Hasil Keluaran (Output)
+## Pembagian Tugas
 
-Setiap eksekusi akan menyimpan hasil di folder `output/<algoritma>/`:
-- `output/hc_steepest/`, `output/hc_sideways/`, `output/hc_random_restart/`, `output/hc_stochastic/`
-- `output/sa/`
-- `output/ga/`
-
-Berkas yang dihasilkan meliputi:
-- `runK.json`: Detail data eksekusi run ke-$k$ (state awal/akhir, nilai objektif, durasi, history).
-- `runK_states.png`: Visualisasi tata letak kendaraan pada geladak kapal (state awal vs akhir).
-- `runK_objective.png`: Plot grafik nilai fungsi objektif terhadap iterasi.
-- `runK_states.txt`: Representasi teks ASCII denah geladak dan daftar kendaraan.
-- `experiment.png`: Plot perbandingan gabungan seluruh run.
-- `summary.md`: Ringkasan statistik performa pencarian (nilai rata-rata, standar deviasi, nilai terbaik, dll.).
-
-
+| NIM | Nama | Pembagian Tugas |
+|:---:|:---|:---|
+| 18224036 | Muhammad Azka Firdaus | Seluruh algoritma Hill Climbing, Laporan  |
+| 18224070 | Muhammad Almer Zain Farisseno | Simulated Annealing, Main, Laporan|
+| 18224074 | Fatin Sajid Darwis | Genetic Algorithm, Visualization, Laporan|
