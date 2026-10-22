@@ -9,11 +9,7 @@ from hill_climbing_basics import (
     state_is_fully_valid,
 )
 
-def steepest_ascent(vehicles, ship, initial_state=None, max_iter=1000,
-                    printall=False, seed=None):
-    if max_iter < 0:
-        raise ValueError("max_iter harus bernilai non-negatif")
-
+def steepest_ascent(vehicles, ship, initial_state=None, printall=False, seed=None):
     rng = random.Random(seed)
     start_time = time.perf_counter()
     if initial_state is None:
@@ -27,7 +23,7 @@ def steepest_ascent(vehicles, ship, initial_state=None, max_iter=1000,
     obj_history = [current_value]
     iterasi = 0
 
-    while iterasi < max_iter:
+    while True:
         if printall:
             print("Nilai objective saat ini:", current_value)
 
