@@ -25,10 +25,139 @@ Algoritma yang diimplementasikan:
 
 ```
 .
-├── src/          
-├── docs/         
-├── output/       
+├── data/
+│   └── dataset.json
+├── docs/
+│   └── report.txt
+├── output/
+├── src/
+│   ├── genetic_algorithm.py
+│   ├── hill_climbing_basics.py
+│   ├── hill_climbing_random_restart.py
+│   ├── hill_climbing_sideways.py
+│   ├── hill_climbing_steepest.py
+│   ├── hill_climbing_stochastic.py
+│   ├── main.py
+│   ├── simulated_annealing.py
+│   └── visualization.py
 ├── requirements.txt
 └── README.md
 ```
+
+## Prasyarat & Instalasi
+
+Pastikan telah menginstal **Python 3.10+**.
+
+1. **Clone repository dan masuk ke direktori proyek:**
+   ```bash
+   git clone https://github.com/Almerosaurus/IF3070_G27_DasarAgamaIslam.git
+   cd IF3070_G27_DasarAgamaIslam
+   ```
+
+2. **(Opsional) Buat dan aktifkan virtual environment:**
+   - **Linux / macOS:**
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
+   - **Windows:**
+     ```powershell
+     python -m venv venv
+     .\venv\Scripts\activate
+     ```
+
+3. **Install dependensi:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Cara Menjalankan Program (Cara Run)
+
+Program utama dijalankan melalui file `src/main.py`. Terdapat beberapa cara menjalankan program:
+
+### 1. Mode Menu Interaktif (Default)
+
+Jalankan perintah berikut untuk memilih algoritma dan varian secara interaktif melalui terminal menggunakan parameter default:
+
+```bash
+python src/main.py
+```
+
+Anda akan diminta memilih algoritma:
+- `1. Hill-climbing` (dilanjutkan memilih varian: Steepest Ascent, Sideways Move, Random Restart, atau Stochastic)
+- `2. Simulated Annealing`
+- `3. Genetic Algorithm`
+
+### 2. Mode Kustomisasi Parameter
+
+Tambahkan argumen `--custom` untuk menyesuaikan parameter algoritma (misalnya temperatur awal SA, ukuran populasi GA, batasan sideways move, dll.):
+
+```bash
+python src/main.py --custom
+```
+
+### 3. Mode Langsung (Command-Line Arguments)
+
+Anda dapat melewati menu interaktif dengan langsung menentukan opsi via CLI:
+
+- **Steepest Ascent Hill-Climbing:**
+  ```bash
+  python src/main.py --search hc --variant steepest
+  ```
+
+- **Hill-Climbing with Sideways Move:**
+  ```bash
+  python src/main.py --search hc --variant sideways
+  ```
+
+- **Random Restart Hill-Climbing:**
+  ```bash
+  python src/main.py --search hc --variant random_restart
+  ```
+
+- **Stochastic Hill-Climbing:**
+  ```bash
+  python src/main.py --search hc --variant stochastic
+  ```
+
+- **Simulated Annealing:**
+  ```bash
+  python src/main.py --search sa
+  ```
+
+- **Genetic Algorithm:**
+  ```bash
+  python src/main.py --search ga
+  ```
+
+#### Opsi Tambahan CLI
+
+| Flag | Nilai | Deskripsi |
+|---|---|---|
+| `--search` | `hc`, `sa`, `ga` | Menentukan algoritma utama |
+| `--variant` | `steepest`, `sideways`, `random_restart`, `stochastic` | Menentukan varian Hill-climbing (wajib jika `--search hc` tanpa interaktif) |
+| `--custom` | *(flag)* | Mengaktifkan prompt pengaturan parameter manual |
+| `--runs` | Integer (default: `3`) | Jumlah pengujian run independen yang dieksekusi |
+| `--seed` | Integer | Menentukan seed dasar untuk reproduksibilitas hasil pencarian |
+
+*Contoh menjalankan 3 run Simulated Annealing dengan seed tertentu:*
+```bash
+python src/main.py --search sa --seed 42 --runs 3
+```
+
+## Hasil Keluaran (Output)
+
+Setiap eksekusi akan menyimpan hasil di folder `output/<algoritma>/`:
+- `output/hc_steepest/`, `output/hc_sideways/`, `output/hc_random_restart/`, `output/hc_stochastic/`
+- `output/sa/`
+- `output/ga/`
+
+Berkas yang dihasilkan meliputi:
+- `runK.json`: Detail data eksekusi run ke-$k$ (state awal/akhir, nilai objektif, durasi, history).
+- `runK_states.png`: Visualisasi tata letak kendaraan pada geladak kapal (state awal vs akhir).
+- `runK_objective.png`: Plot grafik nilai fungsi objektif terhadap iterasi.
+- `runK_states.txt`: Representasi teks ASCII denah geladak dan daftar kendaraan.
+- `experiment.png`: Plot perbandingan gabungan seluruh run.
+- `summary.md`: Ringkasan statistik performa pencarian (nilai rata-rata, standar deviasi, nilai terbaik, dll.).
+
 
