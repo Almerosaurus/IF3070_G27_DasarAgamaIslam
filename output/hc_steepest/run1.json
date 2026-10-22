@@ -1,0 +1,100 @@
+{
+ "algorithm": "steepest",
+ "params": {},
+ "seed": 160569,
+ "initial_state": [
+  null,
+  [
+   3,
+   7,
+   "H"
+  ],
+  null,
+  null,
+  null,
+  [
+   1,
+   7,
+   "H"
+  ],
+  [
+   2,
+   1,
+   "H"
+  ],
+  [
+   5,
+   0,
+   "V"
+  ],
+  [
+   6,
+   4,
+   "H"
+  ],
+  [
+   10,
+   3,
+   "H"
+  ]
+ ],
+ "final_state": [
+  [
+   6,
+   4,
+   "H"
+  ],
+  [
+   3,
+   7,
+   "H"
+  ],
+  null,
+  [
+   5,
+   0,
+   "V"
+  ],
+  null,
+  [
+   1,
+   7,
+   "H"
+  ],
+  [
+   2,
+   1,
+   "H"
+  ],
+  null,
+  null,
+  [
+   10,
+   3,
+   "H"
+  ]
+ ],
+ "initial_value": 494.0,
+ "final_value": 632.0,
+ "duration_seconds": 0.020191599993268028,
+ "history": {
+  "iteration": [
+   0,
+   1,
+   2
+  ],
+  "value": [
+   494.0,
+   578.0,
+   632.0
+  ],
+  "best_so_far": [
+   494.0,
+   578.0,
+   632.0
+  ]
+ },
+ "extra": {
+  "iterations": 2
+ }
+}

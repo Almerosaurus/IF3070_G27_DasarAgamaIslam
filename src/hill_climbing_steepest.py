@@ -1,0 +1,61 @@
+import random
+import time
+
+from hill_climbing_basics import (
+    compute_fitness,
+    generate_successors,
+    random_initial_state,
+    state_is_fully_valid,
+)
+
+def steepest_ascent(vehicles, ship, initial_state=None, printall=False, seed=None):
+    rng = random.Random(seed)
+    start_time = time.perf_counter()
+    if initial_state is None:
+        initial_state = random_initial_state(vehicles, ship, rng=rng)
+    elif not state_is_fully_valid(initial_state, vehicles, ship):
+        raise ValueError("initial_state harus valid dan berisi satu entry per kendaraan")
+
+    initial_state = initial_state[:]
+    state = initial_state[:]
+    current_value = compute_fitness(state, vehicles, ship)
+    obj_history = [current_value]
+    iterasi = 0
+
+    while True:
+        if printall:
+            print("Nilai objective saat ini:", current_value)
+
+        successors = generate_successors(state, vehicles, ship)
+        if not successors:
+            break
+
+        if printall:
+            print("State dengan successor:")
+            for successor in successors:
+                print(successor, "->", compute_fitness(successor, vehicles, ship))
+
+        neighbor_value = max(compute_fitness(s, vehicles, ship) for s in successors)
+        if neighbor_value <= current_value:
+            if printall:
+                print("Tidak ada state tetangga yang lebih baik.")
+            break
+
+        neighbor_candidates = [s for s in successors
+                               if compute_fitness(s, vehicles, ship) == neighbor_value]
+        state = rng.choice(neighbor_candidates)
+        current_value = neighbor_value
+        obj_history.append(current_value)
+        iterasi += 1
+
+        if printall:
+            print("Berpindah ke state:", state)
+            print("Nilai objective baru:", current_value)
+
+    duration = time.perf_counter() - start_time
+    if printall:
+        print("State akhir:", state)
+        print("Nilai objective akhir:", current_value)
+        print("Banyak iterasi:", iterasi)
+
+    return initial_state, state, current_value, obj_history, iterasi, duration
