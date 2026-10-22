@@ -1,4 +1,4 @@
-# IF3070_GXX_NamaKelompok
+# IF3070_GXX_DasarAgamaIslam
 
 Tugas Besar 1 IF3070 Dasar Inteligensi Artifisial 2026/2027
 
