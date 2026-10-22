@@ -1,6 +1,11 @@
-# IF3070_GXX_DasarAgamaIslam
+# IF3070_G27_DasarAgamaIslam
 
 Tugas Besar 1 IF3070 Dasar Inteligensi Artifisial 2026/2027
+
+Anggota Kelompok:
+- Muhammad Azka Firdaus (18224036)
+- Muhammad Almer Zain Farisseno (18224070)
+- Fatin Sajid Darwis (18224074)
 
 ## Deskripsi Singkat
 
@@ -12,7 +17,7 @@ Program ini menyelesaikan masalah penataan kendaraan pada geladak kapal kargo me
 
 Algoritma yang diimplementasikan:
 
-1. Hill-climbing (varian: `<isi varian yang dipilih>`)
+1. Hill-climbing 
 2. Simulated Annealing
 3. Genetic Algorithm
 
@@ -20,9 +25,10 @@ Algoritma yang diimplementasikan:
 
 ```
 .
-├── src/          # source code
-├── docs/         # laporan (.pdf)
-├── output/       # hasil run algoritma
+├── src/          
+├── docs/         
+├── output/       
 ├── requirements.txt
 └── README.md
 ```
+

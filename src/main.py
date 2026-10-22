@@ -59,9 +59,7 @@ DEFAULT_PARAMS = {
 }
 
 
-# ============================================================
-# MODEL DATA
-# ============================================================
+# Model Data
 
 @dataclass
 class Vehicle:
@@ -114,9 +112,7 @@ def ascii_state(vehicles, ship, state, title):
     return buf.getvalue()
 
 
-# ============================================================
-# MENJALANKAN HILL-CLIMBING & SIMULATED ANNEALING
-# ============================================================
+# Hill-climbing & Simulated Annealing
 
 @dataclass
 class RunResult:
@@ -154,7 +150,6 @@ def run_hill_climbing(variant, vehicles, ship, params, seed):
 
 
 def count_stuck(values, window):
-    """Banyak kejadian current value tidak berubah selama >= window iterasi berturut-turut."""
     stuck = same = 0
     for prev, cur in zip(values, values[1:]):
         same = same + 1 if cur == prev else 0
@@ -163,11 +158,6 @@ def count_stuck(values, window):
 
 
 def simulated_annealing_with_record(sv, ss, T0, seed):
-    """
-    Langkah-langkahnya SAMA PERSIS dengan sam.simulated_annealing (memakai fungsi schedule, move, dan
-    compute_fitness dari simulated_annealing.py tanpa diubah). Bedanya hanya: setiap iterasi dicatat
-    untuk plot (objective, e^(dE/T), temperatur) dan state current saat T = 0 ikut dikembalikan.
-    """
     random.seed(seed)
     initial_state = sam.random_initial_state(sv, ss)
     state, cur_val = initial_state[:], sam.compute_fitness(initial_state, sv, ss)
@@ -236,10 +226,6 @@ def save_run(r, vehicles, ship, out_dir, k):
 
 
 def reset_output_dir(path):
-    """
-    Kosongkan folder hasil eksekusi sebelumnya. Di Windows/OneDrive file atau folder kadang sedang
-    dikunci; yang gagal dihapus dibiarkan saja (nanti ditimpa hasil baru) supaya program tidak error.
-    """
     if path.exists():
         for p in sorted(path.rglob("*"), key=lambda q: len(q.parts), reverse=True):
             try:
@@ -281,9 +267,7 @@ def run_local_search(algo, vehicles, ship, params, runs, base_seed):
     return out_dir
 
 
-# ============================================================
-# MENJALANKAN GENETIC ALGORITHM
-# ============================================================
+# Genetic Algorithm
 
 def run_genetic_algorithm(vehicles, ship, params, runs, base_seed):
     out = OUTPUT_DIR / "ga"
@@ -325,9 +309,7 @@ def run_genetic_algorithm(vehicles, ship, params, runs, base_seed):
     return out
 
 
-# ============================================================
-# MENU
-# ============================================================
+# Menu
 
 def choose(title, options):
     print(f"\n=== {title} ===")
