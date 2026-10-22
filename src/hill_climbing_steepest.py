@@ -27,7 +27,6 @@ def steepest_ascent(vehicles, ship, initial_state=None, printall=False, seed=Non
             print("Nilai objective saat ini:", current_value)
 
         successors = generate_successors(state, vehicles, ship)
-        # Menghasilkan semua state tetangga yang mungkin dari state saat ini.
         if not successors:
             break
 
@@ -37,7 +36,6 @@ def steepest_ascent(vehicles, ship, initial_state=None, printall=False, seed=Non
                 print(successor, "->", compute_fitness(successor, vehicles, ship))
 
         neighbor_value = max(compute_fitness(s, vehicles, ship) for s in successors)
-        # Mengambil nilai objektif tertinggi dari semua state tetangga.
         if neighbor_value <= current_value:
             if printall:
                 print("Tidak ada state tetangga yang lebih baik.")
@@ -45,12 +43,10 @@ def steepest_ascent(vehicles, ship, initial_state=None, printall=False, seed=Non
 
         neighbor_candidates = [s for s in successors
                                if compute_fitness(s, vehicles, ship) == neighbor_value]
-        # Memilih secara acak jika beberapa state tetangga memiliki nilai terbaik.
         state = rng.choice(neighbor_candidates)
         current_value = neighbor_value
         obj_history.append(current_value)
         iterasi += 1
-        # Menambah jumlah langkah yang berhasil diterima.
 
         if printall:
             print("Berpindah ke state:", state)

@@ -8,9 +8,9 @@ import random
 class Vehicle:
     def __init__(self, vehicle_id, width, length, shipping_fee, weight, eta=0):
         self.id           = vehicle_id
-        self.width        = width        # lebar (grid)
-        self.length       = length       # panjang (grid)
-        self.shipping_fee = shipping_fee # tarif pengiriman (juta rupiah)
+        self.width        = width
+        self.length       = length
+        self.shipping_fee = shipping_fee
         self.weight = weight
         self.eta    = eta
 
@@ -88,13 +88,53 @@ def is_placement_valid(state, vehicle_index, vehicles, ship):
     return total_weight(state, vehicles) <= ship.max_capacity
 
 
-def state_is_fully_valid(state, vehicles, ship):
+def _state_is_fully_valid_original(state, vehicles, ship):
     return (len(state) == len(vehicles) and
             all(is_placement_valid(state, i, vehicles, ship)
                 for i in range(len(vehicles))))
 
 
+def _cell_size(vehicle, orientation):
+    return ((vehicle.width, vehicle.length) if orientation == 'H'
+            else (vehicle.length, vehicle.width))
+
+
+def state_is_fully_valid(state, vehicles, ship):
+    if len(state) != len(vehicles):
+        return False
+    if total_weight(state, vehicles) > ship.max_capacity:
+        return False
+    occupied = set()
+    for vehicle, placement in zip(vehicles, state):
+        if placement is None:
+            continue
+        x, y, orientation = placement
+        if orientation not in ('H', 'V'):
+            return False
+        cell_width, cell_length = _cell_size(vehicle, orientation)
+        if (x < 0 or y < 0 or x + cell_width > ship.width
+                or y + cell_length > ship.length):
+            return False
+        for dx in range(cell_width):
+            for dy in range(cell_length):
+                cell = (x + dx, y + dy)
+                if cell in occupied:
+                    return False
+                occupied.add(cell)
+    return True
+
+_FITNESS_CACHE = {"owner": None, "values": {}}
+
+
+def max_possible_fitness(vehicles):
+    return sum(vehicle.shipping_fee for vehicle in vehicles)
+
+
 def compute_fitness(state, vehicles, ship):
+    if _FITNESS_CACHE["owner"] == (id(vehicles), id(ship)):
+        cached = _FITNESS_CACHE["values"].get(tuple(state))
+        if cached is not None:
+            return cached
     if not state_is_fully_valid(state, vehicles, ship):
         return 0
     return sum(
@@ -150,11 +190,64 @@ def random_initial_state(vehicles, ship, tries=500, rng=None):
 
 
 def generate_successors(state, vehicles, ship):
-    """Bangkitkan semua perpindahan satu kendaraan dan pertukaran posisi yang valid."""
+    if not state_is_fully_valid(state, vehicles, ship):
+        return _generate_successors_original(state, vehicles, ship)
+
+    owner = {}
+    for index, (vehicle, placement) in enumerate(zip(vehicles, state)):
+        if placement is not None:
+            for cell in occupied_cells(*placement, vehicle):
+                owner[cell] = index
+    current_weight = total_weight(state, vehicles)
+    current_fee = sum(v.shipping_fee for v, p in zip(vehicles, state) if p is not None)
+
+    _FITNESS_CACHE["owner"] = (id(vehicles), id(ship))
+    cache = _FITNESS_CACHE["values"] = {}
     successors = []
     seen = set()
 
-    # Memindahkan, memuat, mengeluarkan, atau mengubah orientasi satu kendaraan.
+    for i, vehicle in enumerate(vehicles):
+        inside = state[i] is not None
+        base_weight = current_weight - (vehicle.weight if inside else 0)
+        base_fee = current_fee - (vehicle.shipping_fee if inside else 0)
+        for placement in possible_placements(vehicle, ship):
+            if placement == state[i]:
+                continue
+            if placement is not None:
+                if base_weight + vehicle.weight > ship.max_capacity:
+                    continue
+                x, y, orientation = placement
+                cell_width, cell_length = _cell_size(vehicle, orientation)
+                if any(owner.get((x + dx, y + dy), i) != i
+                       for dx in range(cell_width) for dy in range(cell_length)):
+                    continue
+            cand = state[:]
+            cand[i] = placement
+            key = tuple(cand)
+            if key not in seen:
+                seen.add(key)
+                successors.append(cand)
+                cache[key] = base_fee + (vehicle.shipping_fee if placement is not None else 0)
+
+    for i in range(len(vehicles)):
+        for j in range(i + 1, len(vehicles)):
+            if state[i] == state[j]:
+                continue
+            cand = state[:]
+            cand[i], cand[j] = cand[j], cand[i]
+            key = tuple(cand)
+            if key not in seen and state_is_fully_valid(cand, vehicles, ship):
+                seen.add(key)
+                successors.append(cand)
+                cache[key] = sum(v.shipping_fee for v, p in zip(vehicles, cand) if p is not None)
+
+    return successors
+
+
+def _generate_successors_original(state, vehicles, ship):
+    successors = []
+    seen = set()
+
     for i, vehicle in enumerate(vehicles):
         for placement in possible_placements(vehicle, ship):
             if placement == state[i]:
@@ -182,12 +275,9 @@ def generate_successors(state, vehicles, ship):
 
 
 def random_successor(state, vehicles, ship, rng=None):
-    """Pilih satu neighbor valid secara acak tanpa membangun semua neighbor."""
     rng = rng or random
     actions = []
 
-    # Simpan deskripsi move, bukan state successor. Coba dalam urutan acak dan
-    # berhenti pada successor valid pertama.
     for vehicle_index, vehicle in enumerate(vehicles):
         for placement in possible_placements(vehicle, ship):
             if placement != state[vehicle_index]:

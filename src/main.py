@@ -1,37 +1,75 @@
-import random
-import math
-#import utils
-#tambahan Genetic Algorithm
-from dataclasses import dataclass
+"""
+IF3070 — Local search penataan kendaraan di geladak kapal. Semua search dijalankan dari file ini.
+
+    python src/main.py             -> pilih algoritma lewat menu, lalu langsung berjalan
+    python src/main.py --custom    -> sama, tetapi parameter bisa diatur sendiri
+    python src/main.py --search hc --variant steepest --seed 123   (tanpa menu)
+
+HC & SA dijalankan 3 kali; GA menjalankan eksperimen sesuai spesifikasi.
+Hasil (gambar, data, ringkasan) disimpan di output/<algoritma>/ dan menggantikan hasil sebelumnya.
+"""
 import argparse
+import contextlib
+import io
+import itertools
+import math
 import json
+import random
 import sys
+import time
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import matplotlib
 
-if "--show" not in sys.argv:
-    matplotlib.use("Agg")   
+matplotlib.use("Agg")   # gambar langsung disimpan ke file
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
 
-import matplotlib.pyplot as plt  
-
-from genetic_algorithm import GAResult, genetic_algorithm, run_ga_experiment, experiment_summary  
-import visualization as viz 
+import hill_climbing_basics as hcb  # noqa: E402
+import simulated_annealing as sam  # noqa: E402
+import visualization as viz  # noqa: E402
+from genetic_algorithm import experiment_summary, run_ga_experiment  # noqa: E402
+from hill_climbing_random_restart import random_restart  # noqa: E402
+from hill_climbing_sideways import sideways_move  # noqa: E402
+from hill_climbing_steepest import steepest_ascent  # noqa: E402
+from hill_climbing_stochastic import stochastic_hill_climbing  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
+DATASET_FILE = ROOT / "data" / "dataset.json"
 OUTPUT_DIR = ROOT / "output"
-#-----------------------------------
 
-HORIZONTAL = "Horizontal"
-VERTICAL = "Vertical"
+ALGORITHM_MENU = [("hc", "Hill-climbing"), ("sa", "Simulated Annealing"), ("ga", "Genetic Algorithm")]
+HC_MENU = [("steepest", "Steepest Ascent Hill-climbing (hill-climbing dasar)"),
+           ("sideways", "Hill-climbing with Sideways Move"),
+           ("random_restart", "Random Restart Hill-climbing"),
+           ("stochastic", "Stochastic Hill-climbing")]
+NAMES = {"steepest": "Steepest Ascent Hill-climbing", "sideways": "Hill-climbing with Sideways Move",
+         "random_restart": "Random Restart Hill-climbing", "stochastic": "Stochastic Hill-climbing",
+         "sa": "Simulated Annealing", "ga": "Genetic Algorithm"}
+DEFAULT_PARAMS = {
+    "steepest": {},
+    "sideways": {"max_sideways": 100},
+    "random_restart": {"max_restart": 10},
+    "stochastic": {"nmax": 1000},
+    "sa": {"T0": 20.0, "stuck_window": 100},
+    "ga": {"control_population": 50, "iteration_variations": [50, 100, 200],
+           "control_iterations": 100, "population_variations": [20, 50, 100],
+           "mutation_rate": 0.1, "elitism": 0, "use_repair": False},
+}
+
+
+# ============================================================
+# MODEL DATA
+# ============================================================
 
 @dataclass
 class Vehicle:
     id: str
     w: int
     l: int
-    shipping_fee: int
-    weight: int
+    shipping_fee: float
+    weight: float
     eta: int
 
 
@@ -39,199 +77,330 @@ class Vehicle:
 class Ship:
     w: int
     l: int
-    max_capacity: int
+    max_capacity: float
 
 
-@dataclass
-class Placement:
-    x: int = 0
-    y: int = 0
-    orientation: str = VERTICAL
-
-    @property
-    def inside(self) -> bool:
-        return self.x is not None and self.y is not None
-
-#tambahan Genetic Algorithm
-EXAMPLE_VEHICLES = [
-    Vehicle("Udin", w=3, l=4, shipping_fee=200, weight=100, eta=3),
-    Vehicle("Dino", w=2, l=3, shipping_fee=100, weight=40, eta=5),
-    Vehicle("Lia", w=4, l=2, shipping_fee=50, weight=20, eta=2),
-    Vehicle("Nia", w=1, l=5, shipping_fee=35, weight=10, eta=7),
-    Vehicle("Bon", w=3, l=3, shipping_fee=25, weight=5, eta=4),
-    Vehicle("Tin", w=2, l=2, shipping_fee=40, weight=10, eta=6),
-    Vehicle("Mer", w=5, l=1, shipping_fee=30, weight=7, eta=1),
-    Vehicle("Ska", w=2, l=4, shipping_fee=60, weight=20, eta=8),
-]
-EXAMPLE_SHIP = Ship(w=10, l=8, max_capacity=500)
-
-
-def load_problem(path=None):
-    """
-    Baca problem dari JSON -> (list[Vehicle], Ship). Tanpa path -> data contoh.
-    Format: {"ship": {"w": 10, "l": 20, "max_capacity": 500},
-             "vehicles": [{"id": "Owen", "w": 3, "l": 4, "shipping_fee": 60, "weight": 5, "eta": 3}, ...]}
-    ("dimensions": {"w":..,"l":..} juga diterima, begitu pula nama key gaya spesifikasi: ShippingFee, MaxCapacity, ...)
-    """
-    if path is None:
-        return list(EXAMPLE_VEHICLES), EXAMPLE_SHIP
-
-    def pick(d, *keys):
-        for k in keys:
-            if k in d:
-                return d[k]
-        raise KeyError(f"key {keys} tidak ditemukan di {d}")
-
-    def dims(d):
-        dd = d.get("dimensions", d.get("Dimensions", d))
-        return int(pick(dd, "w", "width")), int(pick(dd, "l", "length"))
-
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    s = pick(data, "ship", "Ship")
-    sw, sl = dims(s)
-    ship = Ship(sw, sl, pick(s, "max_capacity", "MaxCapacity", "capacity"))
-    vehicles = []
-    for v in pick(data, "vehicles", "Vehicles"):
-        w, l = dims(v)
-        vehicles.append(Vehicle(str(pick(v, "id", "Id", "ID")), w, l,
-                                pick(v, "shipping_fee", "ShippingFee", "fee"),
-                                pick(v, "weight", "Weight"), v.get("eta", v.get("ETA", 0))))
+def load_problem(path):
+    """Baca data set JSON -> (list[Vehicle], Ship)."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    s = data["ship"]
+    ship = Ship(s["dimensions"]["w"], s["dimensions"]["l"], s["max_capacity"])
+    vehicles = [Vehicle(v["id"], v["dimensions"]["w"], v["dimensions"]["l"], v["shipping_fee"],
+                        v["weight"], v.get("eta", 0)) for v in data["vehicles"]]
     return vehicles, ship
 
 
-def to_placements(state):
-    """State GA (None / (x, y, 'H'|'V')) -> list[Placement] milik main.py (di luar kapal = x, y None)."""
-    return [Placement(None, None, VERTICAL) if e is None
-            else Placement(e[0], e[1], HORIZONTAL if e[2] == "H" else VERTICAL) for e in state]
+# Setiap modul punya class Vehicle/Ship sendiri, jadi data dikonversi ke class milik modulnya.
+def to_hc_model(vehicles, ship):
+    return ([hcb.Vehicle(v.id, v.w, v.l, v.shipping_fee, v.weight, v.eta) for v in vehicles],
+            hcb.Ship(ship.w, ship.l, ship.max_capacity))
 
 
-def print_placements(vehicles, state, title):
-    print(f"\n--- {title} ---")
-    for v, p in zip(vehicles, to_placements(state)):
-        pos = f"({p.x:>2}, {p.y:>2}) {p.orientation}" if p.inside else "di luar kapal"
-        print(f"  {v.id:<12} {v.w}x{v.l}  fee={v.shipping_fee:<6g} weight={v.weight:<6g} -> {pos}")
+def to_sa_model(vehicles, ship):
+    return ([sam.Vehicle(v.id, v.w, v.l, v.shipping_fee, v.weight, v.eta) for v in vehicles],
+            sam.Ship(ship.w, ship.l, ship.max_capacity))
 
 
-def save_ga_outputs(result, vehicles, ship, out_dir, prefix, animate=False):
-    """Simpan JSON + gambar state awal/akhir + plot objective (max & rata-rata populasi)."""
-    out_dir = Path(out_dir)
-    paths = {"json": result.save(out_dir / f"{prefix}.json")}
-    p = result.params
-    fig = viz.plot_initial_final(
-        vehicles, ship, result.initial_state, result.final_state,
-        f"Genetic Algorithm — populasi {p['population_size']}, iterasi {p['max_iterations']}, seed {p['seed']}"
-        f"  |  durasi {result.duration_seconds:.2f} s",
-        out_dir / f"{prefix}_states.png", result.initial_value, result.final_value)
+def state_value(vehicles, ship, state):
+    st = viz.state_stats(vehicles, ship, state)
+    return st["fee"] if st["valid"] else 0.0
+
+
+def ascii_state(vehicles, ship, state, title):
+    """Hasil viz.draw_solution sebagai string (untuk dicetak dan disimpan ke file)."""
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        viz.draw_solution(list(state), vehicles, ship, title)
+    return buf.getvalue()
+
+
+# ============================================================
+# MENJALANKAN HILL-CLIMBING & SIMULATED ANNEALING
+# ============================================================
+
+@dataclass
+class RunResult:
+    algorithm: str
+    params: dict
+    seed: int
+    initial_state: list
+    final_state: list
+    initial_value: float
+    final_value: float
+    duration_seconds: float
+    history: dict
+    extra: dict = field(default_factory=dict)
+
+    def save(self, path):
+        Path(path).write_text(json.dumps(asdict(self), indent=1), encoding="utf-8")
+
+
+def run_hill_climbing(variant, vehicles, ship, params, seed):
+    hv, hs = to_hc_model(vehicles, ship)
+    if variant == "random_restart":
+        init, final, value, hist, restarts, per_restart, dur = random_restart(
+            hv, hs, max_restart=params["max_restart"], seed=seed)
+        extra = {"restarts": restarts, "iterations_per_restart": per_restart, "max_restart": params["max_restart"]}
+    else:
+        func, kwargs = {"steepest": (steepest_ascent, {}),
+                        "sideways": (sideways_move, {"max_sideways": params.get("max_sideways")}),
+                        "stochastic": (stochastic_hill_climbing, {"nmax": params.get("nmax")})}[variant]
+        init, final, value, hist, iters, dur = func(hv, hs, seed=seed, **kwargs)
+        extra = {"iterations": iters, **kwargs}
+    history = {"iteration": list(range(len(hist))), "value": list(hist),
+               "best_so_far": list(np.maximum.accumulate(hist))}
+    return RunResult(variant, params, seed, list(init), list(final), state_value(vehicles, ship, init),
+                     float(value), dur, history, extra)
+
+
+def count_stuck(values, window):
+    """Banyak kejadian current value tidak berubah selama >= window iterasi berturut-turut."""
+    stuck = same = 0
+    for prev, cur in zip(values, values[1:]):
+        same = same + 1 if cur == prev else 0
+        stuck += same == window
+    return stuck
+
+
+def simulated_annealing_with_record(sv, ss, T0, seed):
+    """
+    Langkah-langkahnya SAMA PERSIS dengan sam.simulated_annealing (memakai fungsi schedule, move, dan
+    compute_fitness dari simulated_annealing.py tanpa diubah). Bedanya hanya: setiap iterasi dicatat
+    untuk plot (objective, e^(dE/T), temperatur) dan state current saat T = 0 ikut dikembalikan.
+    """
+    random.seed(seed)
+    initial_state = sam.random_initial_state(sv, ss)
+    state, cur_val = initial_state[:], sam.compute_fitness(initial_state, sv, ss)
+    best_state, best_val = state[:], cur_val
+    move_funcs = [sam.move_swap, sam.move_relocate, sam.move_rotate]
+    record = {"iteration": [0], "value": [cur_val], "best_so_far": [best_val],
+              "acceptance_probability": [1.0], "temperature": [T0]}
+    for t in itertools.count(1):
+        T = sam.schedule(t, T0)
+        if T == 0:
+            break
+        new_state = random.choice(move_funcs)(state, sv, ss)
+        new_val = sam.compute_fitness(new_state, sv, ss)
+        delta = new_val - cur_val
+        if delta >= 0 or random.random() < math.exp(delta / T):
+            state, cur_val = new_state, new_val
+        if cur_val > best_val:
+            best_state, best_val = state[:], cur_val
+        for key, val in (("iteration", t), ("value", cur_val), ("best_so_far", best_val),
+                         ("acceptance_probability", 1.0 if delta >= 0 else math.exp(delta / T)), ("temperature", T)):
+            record[key].append(val)
+    return initial_state, state, best_state, best_val, record
+
+
+def run_simulated_annealing(vehicles, ship, params, seed):
+    sv, ss = to_sa_model(vehicles, ship)
+    t0 = time.perf_counter()
+    init, final, _, best_value, record = simulated_annealing_with_record(sv, ss, params["T0"], seed)
+    dur = time.perf_counter() - t0
+    # state akhir = current saat T = 0 (return value di PPT)
+    extra = {"iterations": record["iteration"][-1], "stuck_count": count_stuck(record["value"], params["stuck_window"]),
+             "stuck_window": params["stuck_window"], "best_value": float(best_value)}
+    return RunResult("sa", params, seed, list(init), list(final), state_value(vehicles, ship, init),
+                     state_value(vehicles, ship, final), dur, record, extra)
+
+
+def describe(r):
+    e = r.extra
+    if r.algorithm == "random_restart":
+        return f"banyak restart = {e['restarts']} (maks {e['max_restart']}), iterasi per restart = {e['iterations_per_restart']}"
+    if r.algorithm == "sa":
+        return (f"iterasi = {e['iterations']}, stuck = {e['stuck_count']} kali (>= {e['stuck_window']} iterasi "
+                f"tanpa perubahan), nilai terbaik selama run = {e['best_value']:g}")
+    if r.algorithm == "sideways":
+        return f"iterasi = {e['iterations']} (maks sideways {e['max_sideways']})"
+    return f"iterasi = {e['iterations']}"
+
+
+def save_run(r, vehicles, ship, out_dir, k):
+    """Simpan runK.json, runK_states.png, runK_objective.png, runK_states.txt."""
+    name = NAMES[r.algorithm]
+    r.save(out_dir / f"run{k}.json")
+    plt.close(viz.plot_initial_final(vehicles, ship, r.initial_state, r.final_state,
+                                     f"{name} — run {k} (seed {r.seed})  |  durasi {r.duration_seconds:.2f} s",
+                                     out_dir / f"run{k}_states.png", r.initial_value, r.final_value))
+    fig = viz.plot_objective(r.history, f"{name} — objective function vs iterasi (run {k})",
+                             info=f"{describe(r)}  |  durasi {r.duration_seconds:.2f} s")
+    if r.algorithm == "random_restart":                # garis batas tiap restart
+        for pos in np.cumsum([n + 1 for n in r.extra["iterations_per_restart"][:-1]]):
+            fig.axes[0].axvline(pos - 0.5, color=viz.MUTED, linewidth=0.8, linestyle=":")
+    viz.save(fig, out_dir / f"run{k}_objective.png")
     plt.close(fig)
-    paths["states"] = out_dir / f"{prefix}_states.png"
-    fig = viz.plot_objective(
-        result.history, "Genetic Algorithm — objective function vs iterasi", out_dir / f"{prefix}_objective.png",
-        info=f"Populasi {p['population_size']}  |  {p['max_iterations']} iterasi  |  nilai akhir "
-             f"{result.final_value:,.2f}  |  durasi {result.duration_seconds:.2f} s")
-    plt.close(fig)
-    paths["objective"] = out_dir / f"{prefix}_objective.png"
-    if animate:
-        paths["animation"] = viz.animate_snapshots(vehicles, ship, result.snapshots,
-                                                   out_dir / f"{prefix}_animation.gif", "GA —")
-    return paths
+    (out_dir / f"run{k}_states.txt").write_text(
+        ascii_state(vehicles, ship, r.initial_state, f"STATE AWAL — {name} run {k}") +
+        ascii_state(vehicles, ship, r.final_state, f"STATE AKHIR — {name} run {k}"), encoding="utf-8")
 
 
-def ga_params_from_args(a):
-    return dict(crossover_rate=a.crossover_rate, mutation_rate=a.mutation_rate, elitism=a.elitism,
-                tournament_size=a.tournament, crossover=a.crossover, use_repair=not a.no_repair, fill=a.fill)
+def reset_output_dir(path):
+    """
+    Kosongkan folder hasil eksekusi sebelumnya. Di Windows/OneDrive file atau folder kadang sedang
+    dikunci; yang gagal dihapus dibiarkan saja (nanti ditimpa hasil baru) supaya program tidak error.
+    """
+    if path.exists():
+        for p in sorted(path.rglob("*"), key=lambda q: len(q.parts), reverse=True):
+            try:
+                p.unlink() if p.is_file() else p.rmdir()
+            except OSError:
+                pass
+    path.mkdir(parents=True, exist_ok=True)
 
 
-def cmd_ga(a):
-    vehicles, ship = load_problem(a.input)
-    name = Path(a.input).stem if a.input else "contoh"
-    print(f"Genetic Algorithm: {name}, populasi={a.population}, iterasi={a.iterations}, seed={a.seed}")
-    result = genetic_algorithm(vehicles, ship, a.population, a.iterations, a.seed, verbose=True,
-                               **ga_params_from_args(a))
-    print_placements(vehicles, result.initial_state, "STATE AWAL")
-    print_placements(vehicles, result.final_state, "STATE AKHIR")
-    print("\n" + result.summary())
-    out_dir = Path(a.out) if a.out else OUTPUT_DIR / "ga"
-    prefix = f"{name}_pop{a.population}_iter{a.iterations}_seed{a.seed}"
-    for k, v in save_ga_outputs(result, vehicles, ship, out_dir, prefix, a.animate).items():
-        print(f"{k:<10}: {v}")
-    if a.show:
-        plt.show()
+def run_local_search(algo, vehicles, ship, params, runs, base_seed):
+    out_dir = OUTPUT_DIR / ("sa" if algo == "sa" else f"hc_{algo}")
+    reset_output_dir(out_dir)                         # hasil eksekusi sebelumnya diganti
+    results = []
+    for k in range(1, runs + 1):
+        seed = base_seed + k - 1
+        print(f"\n>>> {NAMES[algo]} — run {k}/{runs} (seed {seed})")
+        r = (run_simulated_annealing(vehicles, ship, params, seed) if algo == "sa"
+             else run_hill_climbing(algo, vehicles, ship, params, seed))
+        save_run(r, vehicles, ship, out_dir, k)
+        print(f"    nilai awal = {r.initial_value:g}  ->  nilai akhir = {r.final_value:g}  |  "
+              f"{describe(r)}  |  durasi = {r.duration_seconds:.2f} s")
+        results.append(r)
+
+    plt.close(viz.plot_experiment({f"run {k}": [r] for k, r in enumerate(results, 1)}, f"{NAMES[algo]} — {runs} run",
+                                  out_dir / "experiment.png", series_key="value", second_key="best_so_far"))
+    v = np.array([r.final_value for r in results])
+    lines = [f"# {NAMES[algo]}", "", f"Parameter: {params}", "",
+             "| Run | Seed | Nilai awal | Nilai akhir | Durasi (s) | Keterangan |", "|---|---|---|---|---|---|"]
+    lines += [f"| {k} | {r.seed} | {r.initial_value:g} | {r.final_value:g} | {r.duration_seconds:.2f} | {describe(r)} |"
+              for k, r in enumerate(results, 1)]
+    lines += ["", f"Rata-rata nilai akhir = {v.mean():.2f}, std = {v.std():.2f}, max = {v.max():g}, min = {v.min():g}",
+              f"Rata-rata durasi = {np.mean([r.duration_seconds for r in results]):.2f} s"]
+    (out_dir / "summary.md").write_text("\n".join(lines), encoding="utf-8")
+
+    best = max(results, key=lambda r: r.final_value)
+    k = results.index(best) + 1
+    print(ascii_state(vehicles, ship, best.initial_state, f"STATE AWAL — run terbaik (run {k})"))
+    print(ascii_state(vehicles, ship, best.final_state, f"STATE AKHIR — run terbaik (run {k})"))
+    return out_dir
 
 
-def cmd_ga_experiment(a):
-    vehicles, ship = load_problem(a.input)
-    name = Path(a.input).stem if a.input else "contoh"
-    out = Path(a.out) if a.out else OUTPUT_DIR / "ga_experiment" / name
+# ============================================================
+# MENJALANKAN GENETIC ALGORITHM
+# ============================================================
+
+def run_genetic_algorithm(vehicles, ship, params, runs, base_seed):
+    out = OUTPUT_DIR / "ga"
+    reset_output_dir(out)                             # hasil eksekusi sebelumnya diganti
     folders = {"A": "A_variasi_iterasi", "B": "B_variasi_populasi"}
 
     def on_result(group, label, k, r):
-        cfg = f"pop{r.params['population_size']}_iter{r.params['max_iterations']}"
-        save_ga_outputs(r, vehicles, ship, out / folders[group] / cfg, f"run{k}")
+        p = r.params
+        d = out / folders[group] / f"pop{p['population_size']}_iter{p['max_iterations']}"
+        r.save(d / f"run{k}.json")
+        plt.close(viz.plot_initial_final(
+            vehicles, ship, r.initial_state, r.final_state,
+            f"Genetic Algorithm — populasi {p['population_size']}, iterasi {p['max_iterations']}, "
+            f"seed {p['seed']}  |  durasi {r.duration_seconds:.2f} s",
+            d / f"run{k}_states.png", r.initial_value, r.final_value))
+        plt.close(viz.plot_objective(
+            r.history, "Genetic Algorithm — objective function vs iterasi", d / f"run{k}_objective.png",
+            info=f"Populasi {p['population_size']}  |  {p['max_iterations']} iterasi  |  nilai akhir "
+                 f"{r.final_value:g}  |  durasi {r.duration_seconds:.2f} s"))
+        (d / f"run{k}_states.txt").write_text(
+            ascii_state(vehicles, ship, r.initial_state, f"STATE AWAL — GA {label} run {k}") +
+            ascii_state(vehicles, ship, r.final_state, f"STATE AKHIR — GA {label} run {k}"), encoding="utf-8")
 
-    exp = run_ga_experiment(vehicles, ship, a.control_population, a.iteration_variations,
-                            a.control_iterations, a.population_variations, a.runs, a.seed,
-                            on_result=on_result, **ga_params_from_args(a))
-    titles = {"A": f"GA — populasi tetap {a.control_population}, variasi banyak iterasi",
-              "B": f"GA — iterasi tetap {a.control_iterations}, variasi jumlah populasi"}
+    exp = run_ga_experiment(vehicles, ship, params["control_population"], params["iteration_variations"],
+                            params["control_iterations"], params["population_variations"], runs, base_seed,
+                            on_result=on_result, mutation_rate=params["mutation_rate"],
+                            elitism=params["elitism"], use_repair=params["use_repair"])
+    titles = {"A": f"GA — populasi tetap {params['control_population']}, variasi banyak iterasi",
+              "B": f"GA — iterasi tetap {params['control_iterations']}, variasi jumlah populasi"}
     for g, groups in exp.items():
         plt.close(viz.plot_experiment(groups, titles[g], out / folders[g] / "experiment.png"))
     (out / "summary.md").write_text(experiment_summary(exp), encoding="utf-8")
-    print(f"Selesai. Hasil di {out}")
+
+    best = max((r for groups in exp.values() for rs in groups.values() for r in rs), key=lambda r: r.final_value)
+    print(f"\nRun GA terbaik: populasi {best.params['population_size']}, iterasi {best.params['max_iterations']}, "
+          f"seed {best.params['seed']}")
+    print(ascii_state(vehicles, ship, best.initial_state, "STATE AWAL — run GA terbaik"))
+    print(ascii_state(vehicles, ship, best.final_state, "STATE AKHIR — run GA terbaik"))
+    return out
 
 
-def cmd_ga_visualize(a):
-    r = GAResult.load(a.result)
-    vehicles = [Vehicle(v["id"], v["w"], v["l"], v["shipping_fee"], v["weight"], v["eta"])
-                for v in r.problem["vehicles"]]
-    s = r.problem["ship"]
-    ship = Ship(s["w"], s["l"], s["max_capacity"])
-    print(r.summary())
-    for k, v in save_ga_outputs(r, vehicles, ship, Path(a.result).parent, Path(a.result).stem, a.animate).items():
-        print(f"{k:<10}: {v}")
-    if a.show:
-        plt.show()
+# ============================================================
+# MENU
+# ============================================================
+
+def choose(title, options):
+    print(f"\n=== {title} ===")
+    for k, (_, label) in enumerate(options, start=1):
+        print(f"  {k}. {label}")
+    while True:
+        ans = input(f"Pilih [1-{len(options)}]: ").strip()
+        if ans.isdigit() and 1 <= int(ans) <= len(options):
+            return options[int(ans) - 1][0]
+        print("  Pilihan tidak valid, coba lagi.")
 
 
-def build_parser():
+def ask(prompt, default, cast=int):
+    while True:
+        ans = input(f"  {prompt} [{default}]: ").strip()
+        try:
+            return cast(ans) if ans else default
+        except ValueError:
+            print("  Input tidak valid, coba lagi.")
+
+
+def ask_params(algo, p):
+    print("\n--- Atur parameter (Enter = pakai nilai default) ---")
+    p = dict(p)
+    ints = lambda s: [int(t) for t in s.replace(",", " ").split()]  # noqa: E731
+    questions = {
+        "sideways": [("max_sideways", "Maximum sideways move", int)],
+        "random_restart": [("max_restart", "Maximum restart", int)],
+        "stochastic": [("nmax", "nmax (banyak iterasi)", int)],
+        "sa": [("T0", "Temperatur awal T0", float),
+               ("stuck_window", "Iterasi tanpa perubahan yang dihitung 'stuck'", int)],
+        "ga": [("control_population", "Jumlah populasi kontrol", int),
+               ("iteration_variations", "3 variasi banyak iterasi", ints),
+               ("control_iterations", "Banyak iterasi kontrol", int),
+               ("population_variations", "3 variasi jumlah populasi", ints),
+               ("mutation_rate", "Peluang mutasi", float),
+               ("elitism", "Elitism (heuristik tambahan, 0 = sesuai PPT)", int),
+               ("use_repair", "Repair (heuristik tambahan, y/n)", lambda s: s.lower().startswith("y"))],
+    }
+    for key, prompt, cast in questions.get(algo, []):
+        p[key] = ask(prompt, p[key], cast)
+    return p
+
+
+def main():
     ap = argparse.ArgumentParser(description="IF3070 — local search penataan kendaraan di geladak kapal")
-    sub = ap.add_subparsers(dest="cmd", required=True)
+    ap.add_argument("--search", choices=["hc", "sa", "ga"], help="lewati menu pilihan algoritma")
+    ap.add_argument("--variant", choices=[k for k, _ in HC_MENU], help="varian hill-climbing")
+    ap.add_argument("--custom", action="store_true", help="atur parameter sendiri")
+    ap.add_argument("--runs", type=int, default=3, help="banyak run tiap konfigurasi (spesifikasi: 3)")
+    ap.add_argument("--seed", type=int, default=None, help="seed dasar (default: acak setiap eksekusi)")
+    a = ap.parse_args()
 
-    def ga_args(p):
-        p.add_argument("--input", "-i", default=None, help="file problem JSON (default: data contoh)")
-        p.add_argument("--out", "-o", default=None, help="folder output")
-        p.add_argument("--crossover-rate", type=float, default=0.9)
-        p.add_argument("--mutation-rate", type=float, default=0.3)
-        p.add_argument("--elitism", type=int, default=2)
-        p.add_argument("--tournament", type=int, default=3)
-        p.add_argument("--crossover", choices=["spatial", "uniform"], default="spatial")
-        p.add_argument("--no-repair", action="store_true", help="tanpa heuristik repair (hanya penalti)")
-        p.add_argument("--fill", action="store_true", help="repair juga mengisi ruang kosong secara greedy")
+    print("=" * 64 + "\n  IF3070 — Local Search Penataan Kendaraan di Geladak Kapal\n" + "=" * 64)
+    algo = a.search or choose("Pilih algoritma local search", ALGORITHM_MENU)
+    if algo == "hc":
+        algo = a.variant or choose("Pilih jenis Hill-climbing", HC_MENU)
+    params = ask_params(algo, DEFAULT_PARAMS[algo]) if a.custom else dict(DEFAULT_PARAMS[algo])
+    vehicles, ship = load_problem(DATASET_FILE)
+    base_seed = a.seed if a.seed is not None else random.SystemRandom().randrange(1_000_000)
 
-    g = sub.add_parser("ga", help="jalankan Genetic Algorithm sekali")
-    ga_args(g)
-    g.add_argument("--population", "-p", type=int, default=50, help="jumlah populasi")
-    g.add_argument("--iterations", "-n", type=int, default=100, help="banyak iterasi (generasi)")
-    g.add_argument("--seed", type=int, default=None)
-    g.add_argument("--animate", action="store_true", help="simpan animasi GIF")
-    g.add_argument("--show", action="store_true", help="tampilkan jendela gambar")
+    print(f"\nAlgoritma : {NAMES[algo]}")
+    print(f"Data set  : geladak {ship.w} x {ship.l}, kapasitas {ship.max_capacity:g}, {len(vehicles)} kendaraan")
+    print(f"Parameter : {params}")
+    print(f"Seed dasar: {base_seed}  (ulangi hasil yang sama dengan: --seed {base_seed})")
 
-    e = sub.add_parser("ga-experiment", help="eksperimen GA sesuai spesifikasi")
-    ga_args(e)
-    e.add_argument("--control-population", type=int, default=50)
-    e.add_argument("--iteration-variations", type=int, nargs=3, default=[50, 100, 200])
-    e.add_argument("--control-iterations", type=int, default=100)
-    e.add_argument("--population-variations", type=int, nargs=3, default=[20, 50, 100])
-    e.add_argument("--runs", type=int, default=3)
-    e.add_argument("--seed", type=int, default=0, help="seed dasar")
-
-    v = sub.add_parser("ga-visualize", help="gambar ulang dari file JSON hasil GA")
-    v.add_argument("result")
-    v.add_argument("--animate", action="store_true")
-    v.add_argument("--show", action="store_true")
-    return ap
+    t0 = time.perf_counter()
+    if algo == "ga":
+        out = run_genetic_algorithm(vehicles, ship, params, a.runs, base_seed)
+    else:
+        out = run_local_search(algo, vehicles, ship, params, a.runs, base_seed)
+    print(f"\nSelesai dalam {time.perf_counter() - t0:.1f} s. Semua hasil ada di: {out}")
 
 
 if __name__ == "__main__":
-    args = build_parser().parse_args()
-    {"ga": cmd_ga, "ga-experiment": cmd_ga_experiment, "ga-visualize": cmd_ga_visualize}[args.cmd](args)
+    sys.exit(main())

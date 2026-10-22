@@ -26,14 +26,12 @@ def sideways_move(vehicles, ship, initial_state=None, max_sideways=100,
     obj_history = [current_value]
     iterasi = 0
     sideways_count = 0
-    # Banyak sideways move berturut-turut sejak perbaikan nilai terakhir.
 
     while True:
         if printall:
             print("Nilai objective saat ini:", current_value)
 
         successors = generate_successors(state, vehicles, ship)
-        # Menghasilkan semua state tetangga yang mungkin dari state saat ini.
         if not successors:
             break
 
@@ -45,14 +43,12 @@ def sideways_move(vehicles, ship, initial_state=None, max_sideways=100,
                 print(successor, "->", value)
 
         neighbor_value = max(successor_values)
-        # Mengambil nilai objektif tertinggi dari semua state tetangga.
         if neighbor_value < current_value:
             if printall:
                 print("Tidak ada state tetangga yang lebih baik atau sama.")
             break
 
         if neighbor_value == current_value:
-            # Sideways move: berpindah ke state tetangga dengan nilai yang sama.
             if sideways_count >= max_sideways:
                 if printall:
                     print("Banyak sideways move sudah mencapai maksimum.")
@@ -63,12 +59,10 @@ def sideways_move(vehicles, ship, initial_state=None, max_sideways=100,
 
         neighbor_candidates = [s for s, value in zip(successors, successor_values)
                                if value == neighbor_value]
-        # Memilih secara acak jika beberapa state tetangga memiliki nilai terbaik.
         state = rng.choice(neighbor_candidates)
         current_value = neighbor_value
         obj_history.append(current_value)
         iterasi += 1
-        # Menambah jumlah langkah yang berhasil diterima.
 
         if printall:
             print("Berpindah ke state:", state)

@@ -31,7 +31,6 @@ def stochastic_hill_climbing(vehicles, ship, nmax=1000, initial_state=None,
             print("Nilai objective saat ini:", current_value)
 
         neighbor = random_successor(state, vehicles, ship, rng=rng)
-        # Menghasilkan satu successor acak, bukan mengevaluasi semuanya.
         if neighbor is None:
             break
 
@@ -39,13 +38,10 @@ def stochastic_hill_climbing(vehicles, ship, nmax=1000, initial_state=None,
         if printall:
             print("Successor acak:", neighbor, "->", neighbor_value)
 
-        # Berpindah hanya jika successor acak memiliki nilai lebih tinggi.
         if neighbor_value > current_value:
             state = neighbor
             current_value = neighbor_value
 
-        # Iterasi menghitung setiap successor yang dicoba, termasuk yang
-        # ditolak; riwayat objective menyimpan nilai setelah tiap percobaan.
         obj_history.append(current_value)
         iterasi += 1
 

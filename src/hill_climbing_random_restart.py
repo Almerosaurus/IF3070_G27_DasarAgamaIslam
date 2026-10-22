@@ -23,7 +23,6 @@ def random_restart(vehicles, ship, max_restart=10, printall=False, seed=None):
         if printall:
             print(f"--- Percobaan ke-{restart + 1} (restart ke-{restart}) ---")
 
-        # Setiap percobaan adalah steepest ascent dari initial state random baru.
         run_initial, run_state, run_value, run_history, run_iterasi, _ = steepest_ascent(
             vehicles, ship, printall=printall, seed=rng.randrange(2**32))
 
@@ -40,7 +39,6 @@ def random_restart(vehicles, ship, max_restart=10, printall=False, seed=None):
             print("Nilai objective terbaik sejauh ini:", best_value)
 
         if best_value >= upper_bound:
-            # Semua kendaraan sudah terangkut sehingga tidak mungkin lebih baik lagi.
             if printall:
                 print("Nilai objective sudah mencapai batas atas.")
             break

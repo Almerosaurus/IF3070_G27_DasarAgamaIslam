@@ -1,0 +1,62 @@
+
+============================================================
+  STATE AWAL — GA pop=50, iter=200 run 1
+============================================================
+  Geladak : 12 (lebar) x 12 (panjang)
+  Kapasitas Maksimal : 600
+
+  y\x   0  1  2  3  4  5  6  7  8  9 10 11
+  -----------------------------------------
+   0    G  G  G  .  .  .  J  J  .  .  .  .
+   1    G  G  G  B  B  B  J  J  D  D  D  D
+   2    G  G  G  B  B  B  J  J  D  D  D  D
+   3    G  G  G  B  B  B  J  J  D  D  D  D
+   4    .  .  .  B  B  B  .  .  D  D  D  D
+   5    .  .  .  B  B  B  .  .  D  D  D  D
+   6    C  C  C  C  C  C  .  A  A  A  A  .
+   7    C  C  C  C  C  C  .  A  A  A  A  .
+   8    C  C  C  C  C  C  .  A  A  A  A  .
+   9    C  C  C  C  C  C  .  A  A  A  A  .
+  10    F  F  F  F  F  .  .  A  A  A  A  .
+  11    F  F  F  F  F  .  .  A  A  A  A  .
+  -----------------------------------------
+
+  --- Statistik ---
+  Total kendaraan       : 10
+  Di dalam geladak      : 7
+  Di luar geladak       : 3
+  Total ShippingFee     : 819.0 juta rupiah
+  Total berat           : 482.0 / 600 unit
+  Area terpakai         : 113 / 144 (78.5%)
+  Status                : VALID
+
+============================================================
+  STATE AKHIR — GA pop=50, iter=200 run 1
+============================================================
+  Geladak : 12 (lebar) x 12 (panjang)
+  Kapasitas Maksimal : 600
+
+  y\x   0  1  2  3  4  5  6  7  8  9 10 11
+  -----------------------------------------
+   0    .  .  .  .  .  .  .  .  .  B  B  B
+   1    .  .  .  .  J  J  J  J  .  B  B  B
+   2    .  .  .  .  J  J  J  J  .  B  B  B
+   3    G  G  G  G  I  I  I  I  .  B  B  B
+   4    G  G  G  G  I  I  I  I  .  B  B  B
+   5    G  G  G  G  I  I  I  I  .  .  .  .
+   6    E  E  E  E  I  I  I  I  D  D  D  D
+   7    E  E  E  E  I  I  I  I  D  D  D  D
+   8    E  E  E  E  I  I  I  I  D  D  D  D
+   9    E  E  E  E  .  .  .  .  D  D  D  D
+  10    E  E  E  E  .  .  .  .  D  D  D  D
+  11    E  E  E  E  .  .  .  .  .  .  .  .
+  -----------------------------------------
+
+  --- Statistik ---
+  Total kendaraan       : 10
+  Di dalam geladak      : 6
+  Di luar geladak       : 4
+  Total ShippingFee     : 575.0 juta rupiah
+  Total berat           : 440.0 / 600 unit
+  Area terpakai         : 103 / 144 (71.5%)
+  Status                : VALID
