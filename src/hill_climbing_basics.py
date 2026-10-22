@@ -29,7 +29,6 @@ class Ship:
 # Fungsi Bantuan
 
 def occupied_cells(x, y, orientation, vehicle):
-    """Himpunan koordinat (kolom, baris) yang ditempati kendaraan di (x,y)."""
     cell_width, cell_length = (
         (vehicle.width, vehicle.length)
         if orientation == 'H'

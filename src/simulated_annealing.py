@@ -8,9 +8,9 @@ import itertools
 class Vehicle:
     def __init__(self, vid, w, l, fee, weight, eta):
         self.id     = vid
-        self.w      = w      # width  (grid)
-        self.l      = l      # length (grid)
-        self.fee    = fee    # ShippingFee (juta rupiah)
+        self.w      = w    
+        self.l      = l      
+        self.fee    = fee    
         self.weight = weight
         self.eta    = eta
     def __repr__(self):

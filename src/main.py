@@ -69,7 +69,6 @@ class Ship:
 
 
 def load_problem(path):
-    """Baca data set JSON -> (list[Vehicle], Ship)."""
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     s = data["ship"]
     ship = Ship(s["dimensions"]["w"], s["dimensions"]["l"], s["max_capacity"])
@@ -95,7 +94,6 @@ def state_value(vehicles, ship, state):
 
 
 def ascii_state(vehicles, ship, state, title):
-    """Hasil viz.draw_solution sebagai string (untuk dicetak dan disimpan ke file)."""
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         viz.draw_solution(list(state), vehicles, ship, title)
@@ -197,7 +195,6 @@ def describe(r):
 
 
 def save_run(r, vehicles, ship, out_dir, k):
-    """Simpan runK.json, runK_states.png, runK_objective.png, runK_states.txt."""
     name = NAMES[r.algorithm]
     r.save(out_dir / f"run{k}.json")
     plt.close(viz.plot_initial_final(vehicles, ship, r.initial_state, r.final_state,
@@ -227,7 +224,7 @@ def reset_output_dir(path):
 
 def run_local_search(algo, vehicles, ship, params, runs, base_seed):
     out_dir = OUTPUT_DIR / ("sa" if algo == "sa" else f"hc_{algo}")
-    reset_output_dir(out_dir)                         # hasil eksekusi sebelumnya diganti
+    reset_output_dir(out_dir)                        
     results = []
     for k in range(1, runs + 1):
         seed = base_seed + k - 1
@@ -261,7 +258,7 @@ def run_local_search(algo, vehicles, ship, params, runs, base_seed):
 
 def run_genetic_algorithm(vehicles, ship, params, runs, base_seed):
     out = OUTPUT_DIR / "ga"
-    reset_output_dir(out)                             # hasil eksekusi sebelumnya diganti
+    reset_output_dir(out)                             
     folders = {"A": "A_variasi_iterasi", "B": "B_variasi_populasi"}
 
     def on_result(group, label, k, r):

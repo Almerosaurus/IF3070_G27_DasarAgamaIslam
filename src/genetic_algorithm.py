@@ -26,7 +26,6 @@ class Problem:
         self.max_fitness = self.fee.sum() 
 
     def size(self, i, ori):
-        """(lebar ke arah x, tinggi ke arah y) kendaraan i."""
         return (self.vw[i], self.vl[i]) if ori == H else (self.vl[i], self.vw[i])
 
 
