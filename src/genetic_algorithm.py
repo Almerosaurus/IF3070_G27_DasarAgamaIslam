@@ -1,33 +1,3 @@
-"""
-Genetic Algorithm — penataan kendaraan di geladak kapal (IF3070 Tugas Besar 1)
-
-File ini berdiri sendiri (hanya butuh numpy) dan memakai konvensi yang SAMA dengan
-simulated_annealing.py supaya hasil kedua algoritma bisa dibandingkan & divisualisasikan bersama:
-
-    state      = list, satu entry per kendaraan (urutan sama dengan list vehicles)
-                   None          -> kendaraan di luar kapal
-                   (x, y, ori)   -> kendaraan di geladak, pojok kiri-atas di sel (x, y)
-    ori        = 'H' : menempati veh.w sel ke arah x dan veh.l sel ke arah y
-                 'V' : menempati veh.l sel ke arah x dan veh.w sel ke arah y
-    geladak    = x di 0 .. ship.w-1 , y di 0 .. ship.l-1
-
-Objek vehicle cukup punya atribut  id, w, l, weight, dan shipping_fee (atau fee).
-Objek ship cukup punya atribut     w, l, dan max_capacity (atau max_cap).
-Jadi Vehicle/Ship dari main.py maupun dari simulated_annealing.py sama-sama bisa dipakai.
-
-Ringkasan algoritma (per generasi = 1 iterasi):
-    1. Fitness     : objective function = total fee - penalti pelanggaran constraint
-    2. Elitisme    : `elitism` individu terbaik langsung lolos ke generasi berikutnya
-    3. Seleksi     : tournament selection (aman walau fitness bernilai negatif)
-    4. Crossover   : "spatial" (potong geladak pada satu kolom x acak) atau "uniform"
-    5. Mutasi      : 1..mutation_steps move acak: swap / pindah koordinat / rotasi
-    6. Repair      : (opsional) heuristik greedy yang membuat anak menjadi valid
-
-Pemakaian singkat:
-    from genetic_algorithm import GeneticAlgorithm
-    result = GeneticAlgorithm(vehicles, ship, population_size=50, max_iterations=100, seed=1).run()
-    print(result.final_value, result.final_state)
-"""
 from __future__ import annotations
 
 import json
