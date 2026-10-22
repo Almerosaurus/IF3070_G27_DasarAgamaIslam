@@ -3,6 +3,7 @@ import random
 import math
 import json
 import sys
+import itertools
 from typing import List, Optional, Tuple, Dict, Set
 
 # ============================================================
@@ -84,6 +85,10 @@ def compute_fitness(state, vehicles, ship):
         return 0.0
     return sum(vehicles[i].fee for i, e in enumerate(state)
                if e is not None)
+
+def schedule(t, T0, alpha=0.995, T_min=0.001):
+    T = T0 * alpha ** (t - 1)
+    return T if T >= T_min else 0.0
 
 
 # ============================================================
@@ -171,7 +176,7 @@ def move_rotate(state, vehicles, ship):
 # 5. SIMULATED ANNEALING
 # ============================================================
 
-def simulated_annealing(vehicles, ship, initial_state=None, T0=50.0, T_final=1.0, max_iter=100, seed=None):
+def simulated_annealing(vehicles, ship, initial_state=None, T0=50.0, seed=None):
     if seed is not None:
         random.seed(seed)
 
@@ -185,8 +190,10 @@ def simulated_annealing(vehicles, ship, initial_state=None, T0=50.0, T_final=1.0
 
     move_funcs = [move_swap, move_relocate, move_rotate]
 
-    for it in range(max_iter):
-        T = T0
+    for t in itertools.count(1):
+        T = schedule(t, T0)
+        if T == 0:
+                break
 
         new_state = random.choice(move_funcs)(state, vehicles, ship)
         new_val   = compute_fitness(new_state, vehicles, ship)
@@ -199,15 +206,11 @@ def simulated_annealing(vehicles, ship, initial_state=None, T0=50.0, T_final=1.0
             best_val   = cur_val
             best_state = state[:]
 
-        if (it + 1) % (max_iter // 10) == 0:
-            pct = (it + 1) / max_iter * 100
-            print(f"\r  Iterasi {it+1:>7d}/{max_iter}  "
-                  f"T={T:.2f}  "
-                  f"cur={cur_val:.1f}  best={best_val:.1f}  "
-                  f"[{pct:.0f}%]", end="", flush=True)
+        if (t + 1) % 10 == 0:
+            print(f"\r  Iterasi {t+1:>7d} " f"T={T:.2f}  " f"cur={cur_val:.1f}  best={best_val:.1f}  " , end="", flush=True)
+
     print()
     return best_state, best_val, initial_state
-
 
 # ============================================================
 # 6. VISUALISASI (ASCII)
@@ -302,9 +305,9 @@ def main():
     vehicles = [
         Vehicle("Udin",  w=3, l=4, fee=200, weight=100, eta=3),
         Vehicle("Dino",  w=2, l=3, fee=100, weight=40, eta=5),
-        Vehicle("Tia", w=4, l=2, fee=50, weight=20, eta=2),
+        Vehicle("Lia", w=4, l=2, fee=50, weight=20, eta=2),
         Vehicle("Nia",  w=1, l=5, fee=35, weight=10, eta=7),
-        Vehicle("Don",   w=3, l=3, fee=25, weight=5, eta=4),
+        Vehicle("Bon",   w=3, l=3, fee=25, weight=5, eta=4),
         Vehicle("Tin", w=2, l=2, fee=40, weight=10, eta=6),
         Vehicle("Mer",  w=5, l=1, fee=30, weight=7, eta=1),
         Vehicle("Ska",  w=2, l=4, fee=60, weight=20, eta=8),
@@ -321,8 +324,7 @@ def main():
     best_state, best_val, _ = simulated_annealing(
         vehicles, ship,
         initial_state=initial_state,
-        T0=20.0, T_final=1.0,
-        max_iter=100, seed=None
+        T0=20.0, seed=None
     )
 
     # ---- VISUALISASI HASIL ----
