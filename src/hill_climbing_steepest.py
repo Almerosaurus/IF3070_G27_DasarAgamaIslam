@@ -9,11 +9,7 @@ from hill_climbing_basics import (
     state_is_fully_valid,
 )
 
-def steepest_ascent(vehicles, ship, initial_state=None, max_iter=1000,
-                    printall=False, seed=None):
-    if max_iter < 0:
-        raise ValueError("max_iter harus bernilai non-negatif")
-
+def steepest_ascent(vehicles, ship, initial_state=None, seed=None):
     rng = random.Random(seed)
     start_time = time.perf_counter()
     if initial_state is None:
@@ -27,44 +23,35 @@ def steepest_ascent(vehicles, ship, initial_state=None, max_iter=1000,
     obj_history = [current_value]
     iterasi = 0
 
-    while iterasi < max_iter:
-        if printall:
-            print("Nilai objective saat ini:", current_value)
-
+    while True:
         successors = generate_successors(state, vehicles, ship)
-        # Menghasilkan semua state tetangga yang mungkin dari state saat ini.
+        # Generate semua state tetangga
         if not successors:
             break
 
-        if printall:
-            print("State dengan successor:")
-            for successor in successors:
-                print(successor, "->", compute_fitness(successor, vehicles, ship))
-
         neighbor_value = max(compute_fitness(s, vehicles, ship) for s in successors)
-        # Mengambil nilai objektif tertinggi dari semua state tetangga.
+        # Pilih value tertinggi
         if neighbor_value <= current_value:
-            if printall:
-                print("Tidak ada state tetangga yang lebih baik.")
             break
 
         neighbor_candidates = [s for s in successors
                                if compute_fitness(s, vehicles, ship) == neighbor_value]
-        # Memilih secara acak jika beberapa state tetangga memiliki nilai terbaik.
+        # Pilih secara acak jika beberapa memiliki nilai terbaik.
         state = rng.choice(neighbor_candidates)
         current_value = neighbor_value
         obj_history.append(current_value)
         iterasi += 1
-        # Menambah jumlah langkah yang berhasil diterima.
+        # Catat langkah yang berhasil diterima
 
-        if printall:
-            print("Berpindah ke state:", state)
-            print("Nilai objective baru:", current_value)
+        if iterasi % 10 == 0:
+            print(f"\r  Iterasi {iterasi:>7d}  cur={current_value:.1f}  "
+                  f"best={current_value:.1f}", end="", flush=True)
 
     duration = time.perf_counter() - start_time
-    if printall:
-        print("State akhir:", state)
-        print("Nilai objective akhir:", current_value)
-        print("Banyak iterasi:", iterasi)
+    if iterasi >= 10:
+        print()
+    print("State akhir:", state)
+    print("Nilai objective akhir:", current_value)
+    print("Banyak iterasi:", iterasi)
 
     return initial_state, state, current_value, obj_history, iterasi, duration

@@ -4,15 +4,15 @@ import time
 
 from hill_climbing_basics import (
     compute_fitness,
-    generate_successors,
     random_initial_state,
+    random_successor,
     state_is_fully_valid,
 )
 
-def stochastic_hill_climbing(vehicles, ship, initial_state=None, max_iter=None,
-                             printall=False, seed=None):
-    if max_iter is not None and max_iter < 0:
-        raise ValueError("max_iter harus bernilai non-negatif")
+def stochastic_hill_climbing(vehicles, ship, nmax=1000, initial_state=None,
+                             seed=None):
+    if nmax < 0:
+        raise ValueError("nmax harus bernilai non-negatif")
 
     rng = random.Random(seed)
     start_time = time.perf_counter()
@@ -27,45 +27,32 @@ def stochastic_hill_climbing(vehicles, ship, initial_state=None, max_iter=None,
     obj_history = [current_value]
     iterasi = 0
 
-    while max_iter is None or iterasi < max_iter:
-        if printall:
-            print("Nilai objective saat ini:", current_value)
-
-        successors = generate_successors(state, vehicles, ship)
-        # Menghasilkan semua state tetangga yang mungkin dari state saat ini.
-        if not successors:
+    for _ in range(nmax):
+        neighbor = random_successor(state, vehicles, ship, rng=rng)
+        # Ambil satu successor acak untuk dievaluasi.
+        if neighbor is None:
             break
 
-        if printall:
-            print("State dengan successor:")
-        successor_values = [compute_fitness(s, vehicles, ship) for s in successors]
-        if printall:
-            for successor, value in zip(successors, successor_values):
-                print(successor, "->", value)
+        neighbor_value = compute_fitness(neighbor, vehicles, ship)
+        # Berpindah hanya jika nilai successor lebih tinggi.
+        if neighbor_value > current_value:
+            state = neighbor
+            current_value = neighbor_value
 
-        uphill_candidates = [(s, value) for s, value in zip(successors, successor_values)
-                             if value > current_value]
-        # Mengambil semua state tetangga yang lebih baik dari state saat ini.
-        if not uphill_candidates:
-            if printall:
-                print("Tidak ada state tetangga yang lebih baik.")
-            break
-
-        # Memilih secara acak salah satu state tetangga yang lebih baik,
-        # tidak harus yang terbaik.
-        state, current_value = rng.choice(uphill_candidates)
+        # Hitung setiap successor yang dicoba, termasuk yang ditolak.
+        # Simpan nilai objective setelah setiap percobaan.
         obj_history.append(current_value)
         iterasi += 1
-        # Menambah jumlah langkah yang berhasil diterima.
 
-        if printall:
-            print("Berpindah ke state:", state)
-            print("Nilai objective baru:", current_value)
+        if iterasi % 10 == 0:
+            print(f"\r  Iterasi {iterasi:>7d}  cur={current_value:.1f}  "
+                  f"best={current_value:.1f}", end="", flush=True)
 
     duration = time.perf_counter() - start_time
-    if printall:
-        print("State akhir:", state)
-        print("Nilai objective akhir:", current_value)
-        print("Banyak iterasi:", iterasi)
+    if iterasi >= 10:
+        print()
+    print("State akhir:", state)
+    print("Nilai objective akhir:", current_value)
+    print("Banyak iterasi:", iterasi)
 
     return initial_state, state, current_value, obj_history, iterasi, duration
