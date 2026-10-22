@@ -1,9 +1,6 @@
 import random
 
-
-# ============================================================
-# 1. MODEL DATA
-# ============================================================
+# Model Data
 
 class Vehicle:
     def __init__(self, vehicle_id, width, length, shipping_fee, weight, eta=0):
@@ -29,9 +26,7 @@ class Ship:
         return f"Ship({self.width}x{self.length}, cap={self.max_capacity})"
 
 
-# ============================================================
-# 2. FUNGSI UMUM
-# ============================================================
+# Fungsi Bantuan
 
 def occupied_cells(x, y, orientation, vehicle):
     """Himpunan koordinat (kolom, baris) yang ditempati kendaraan di (x,y)."""

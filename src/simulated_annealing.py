@@ -3,9 +3,7 @@ import random
 import math
 import itertools
 
-# ============================================================
-# 1. MODEL DATA
-# ============================================================
+# 1. Model Data
 
 class Vehicle:
     def __init__(self, vid, w, l, fee, weight, eta):
@@ -28,9 +26,7 @@ class Ship:
         return f"Ship({self.w}x{self.l}, cap={self.max_cap})"
 
 
-# ============================================================
-# 2. FUNGSI BANTUAN
-# ============================================================
+# 2. Fungsi Bantuan
 
 def occupied_cells(x, y, ori, veh):
     """
@@ -67,10 +63,6 @@ def is_placement_valid(state, veh_idx, vehicles, ship):
     return True
 
 def state_is_fully_valid(state, vehicles, ship):
-    """
-    [DIPERCEPAT] Hasil sama dengan _state_is_fully_valid_original, tetapi tiap sel cukup
-    dicek sekali (tidak O(n^2)).
-    """
     if total_weight(state, vehicles) > ship.max_cap:
         return False
     occupied = set()
@@ -106,9 +98,7 @@ def schedule(t, T0, alpha=0.995, T_min=0.001):
     return T if T >= T_min else 0.0
 
 
-# ============================================================
-# 3. RANDOM INITIAL STATE
-# ============================================================
+# 3. Random Initial State
 
 def random_initial_state(vehicles, ship, tries=500):
     state = [None] * len(vehicles)
@@ -132,9 +122,7 @@ def random_initial_state(vehicles, ship, tries=500):
     return state
 
 
-# ============================================================
-# 4. NEIGHBOR GENERATION (3 Tipe Move)
-# ============================================================
+# 4. Neighbor Generation (3 Aksi)
 
 def move_swap(state, vehicles, ship):
     n = len(vehicles)
@@ -187,13 +175,9 @@ def move_rotate(state, vehicles, ship):
     return state[:]
 
 
-# ============================================================
-# 5. SIMULATED ANNEALING
-# ============================================================
+# 5. Simulated Annealing
 
 def simulated_annealing(vehicles, ship, initial_state=None, T0=50.0, seed=None, record=None):
-    # [DITAMBAHKAN] record: dict opsional untuk mencatat data yang diminta spesifikasi
-    # (objective per iterasi, e^(dE/T), temperatur, state current terakhir). Perilaku SA tidak berubah.
     if seed is not None:
         random.seed(seed)
 
@@ -238,8 +222,5 @@ def simulated_annealing(vehicles, ship, initial_state=None, T0=50.0, seed=None, 
 
     print()
     if record is not None:
-        record["final_current_state"] = state[:]   # current saat T = 0 (return value di PPT)
+        record["final_current_state"] = state[:]
     return best_state, best_val, initial_state
-
-# Visualisasi ASCII (draw_solution) dipindahkan ke visualization.py,
-# dan cara menjalankan SA dipindahkan ke main.py (menu).

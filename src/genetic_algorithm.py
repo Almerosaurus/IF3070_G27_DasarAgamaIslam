@@ -8,9 +8,7 @@ import numpy as np
 H, V = "H", "V"
 
 
-# ============================================================
-# 1. DATA PERMASALAHAN
-# ============================================================
+# Model Data
 
 class Problem:
 
@@ -32,9 +30,7 @@ class Problem:
         return (self.vw[i], self.vl[i]) if ori == H else (self.vl[i], self.vw[i])
 
 
-# ============================================================
-# 2. FITNESS FUNCTION
-# ============================================================
+# Fungsi Fitness
 
 def fitness(prob, state):
     grid = np.zeros((prob.L, prob.W), dtype=int)
@@ -54,9 +50,7 @@ def fitness(prob, state):
     return fee
 
 
-# ============================================================
-# 3. OPERATOR GA
-# ============================================================
+# Operator GA
 
 def random_state(prob, rng, tries=500):
     state = [None] * prob.n
@@ -133,9 +127,7 @@ def repair(prob, state):
     return state
 
 
-# ============================================================
-# 4. GENETIC ALGORITHM
-# ============================================================
+# Genetic Algorithm
 
 @dataclass
 class GAResult:
@@ -189,13 +181,11 @@ def genetic_algorithm(vehicles, ship, population_size=50, max_iterations=100, se
                     float(fit.max()), max(history["max"]), gen, time.perf_counter() - t0, history)
 
 
-# ============================================================
-# 5. EKSPERIMEN (sesuai spesifikasi)
-# ============================================================
+# 5. Eksperimen
+
 def run_ga_experiment(vehicles, ship, control_population=50, iteration_variations=(50, 100, 200),
                       control_iterations=100, population_variations=(20, 50, 100),
                       runs=3, base_seed=0, on_result=None, **ga_params):
-    """Return {"A": {label: [GAResult, ...]}, "B": {...}}. on_result(group, label, k, r) dipanggil tiap run."""
     plans = {"A": [(control_population, it) for it in iteration_variations],
              "B": [(p, control_iterations) for p in population_variations]}
     out = {}

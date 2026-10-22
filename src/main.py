@@ -1,13 +1,3 @@
-"""
-IF3070 — Local search penataan kendaraan di geladak kapal. Semua search dijalankan dari file ini.
-
-    python src/main.py             -> pilih algoritma lewat menu, lalu langsung berjalan
-    python src/main.py --custom    -> sama, tetapi parameter bisa diatur sendiri
-    python src/main.py --search hc --variant steepest --seed 123   (tanpa menu)
-
-HC & SA dijalankan 3 kali; GA menjalankan eksperimen sesuai spesifikasi.
-Hasil (gambar, data, ringkasan) disimpan di output/<algoritma>/ dan menggantikan hasil sebelumnya.
-"""
 import argparse
 import contextlib
 import io
