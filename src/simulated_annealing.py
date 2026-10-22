@@ -29,11 +29,6 @@ class Ship:
 # 2. Fungsi Bantuan
 
 def occupied_cells(x, y, ori, veh):
-    """
-    Set koordinat (col,row) yang ditempati 'veh' di (x,y) ori.
-    H : lebar = veh.w (ke arah x), tinggi = veh.l (ke arah y)
-    V : lebar = veh.l (ke arah x), tinggi = veh.w (ke arah y)
-    """
     cw, ch = (veh.w, veh.l) if ori == 'H' else (veh.l, veh.w)
     return {(x + dx, y + dy) for dx in range(cw) for dy in range(ch)}
 
